@@ -20,7 +20,7 @@ public class UserService {
 
     public UserDto updateUser(Long id, UserDto userDto) {
         User user = UserMapper.UserDtoToUser(id, userDto);
-        userStorage.createUser(user);
+        userStorage.updateUser(id, user);
         return UserMapper.userToUserDto(user);
     }
 

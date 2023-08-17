@@ -1,6 +1,7 @@
 package ru.practicum.shareit.item;
 
 import org.springframework.stereotype.Component;
+import ru.practicum.shareit.exception.ItemNotOwnedByUserException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.model.Item;
 
@@ -26,6 +27,18 @@ public class InMemoryItemStorage implements ItemStorage {
     public void updateItem(Long id, Item updatedItem, Long ownerId) {
         if (!items.containsKey(id)) {
             throw new NotFoundException("Предмет не найден");
+        }
+        if (items.get(id).getOwnerId() != ownerId) {
+            throw new ItemNotOwnedByUserException("Предмет не принадлежит пользователю");
+        }
+        if (updatedItem.getName() == null) {
+            updatedItem.setName(items.get(id).getName());
+        }
+        if (updatedItem.getDescription() == null) {
+            updatedItem.setDescription(items.get(id).getDescription());
+        }
+        if (updatedItem.getAvailable() == null) {
+            updatedItem.setAvailable(items.get(id).getAvailable());
         }
         items.put(id, new Item(id, updatedItem.getName(),
                 updatedItem.getDescription(), updatedItem.getAvailable(), ownerId));
