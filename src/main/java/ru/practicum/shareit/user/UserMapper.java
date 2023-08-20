@@ -13,7 +13,7 @@ public class UserMapper {
         return new UserDto(user.getId(), user.getName(), user.getEmail());
     }
 
-    public User UserDtoToUser(Long id, UserDto userDto) {
+    public User userDtoToUser(Long id, UserDto userDto) {
         return new User(id, userDto.getName(), userDto.getEmail());
     }
 

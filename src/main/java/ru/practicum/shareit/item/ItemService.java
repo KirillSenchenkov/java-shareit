@@ -20,13 +20,13 @@ public class ItemService {
         if (userStorage.getTargetUser(ownerId) == null) {
             throw new NotFoundException("Пользователь, для которого создается предмет, не найден в системе");
         }
-        Item item = ItemMapper.ItemDtoToItem(null, itemDto, ownerId);
+        Item item = ItemMapper.itemDtoToItem(null, itemDto, ownerId);
         itemStorage.createItem(item);
         return item;
     }
 
     public Item updateItem(Long id, ItemDto itemDto, Long ownerId) {
-        itemStorage.updateItem(id, ItemMapper.ItemDtoToItem(id, itemDto, ownerId), ownerId);
+        itemStorage.updateItem(id, ItemMapper.itemDtoToItem(id, itemDto, ownerId), ownerId);
         return itemStorage.getTargetItem(id);
     }
 

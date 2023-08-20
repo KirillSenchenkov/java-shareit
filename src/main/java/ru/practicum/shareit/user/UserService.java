@@ -13,13 +13,13 @@ public class UserService {
     private UserStorage userStorage;
 
     public UserDto createUser(UserDto userDto) {
-        User user = UserMapper.UserDtoToUser(null, userDto);
+        User user = UserMapper.userDtoToUser(null, userDto);
         userStorage.createUser(user);
         return UserMapper.userToUserDto(user);
     }
 
     public UserDto updateUser(Long id, UserDto userDto) {
-        User user = UserMapper.UserDtoToUser(id, userDto);
+        User user = UserMapper.userDtoToUser(id, userDto);
         userStorage.updateUser(id, user);
         return UserMapper.userToUserDto(user);
     }

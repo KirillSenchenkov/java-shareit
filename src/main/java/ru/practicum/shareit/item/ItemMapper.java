@@ -14,11 +14,11 @@ public class ItemMapper {
         return new ItemDto(item.getName(), item.getDescription(), item.getAvailable());
     }
 
-    public Item ItemDtoToItem(Long id, ItemDto itemDto, Long ownerId) {
+    public Item itemDtoToItem(Long id, ItemDto itemDto, Long ownerId) {
         return new Item(id, itemDto.getName(), itemDto.getDescription(), itemDto.getAvailable(), ownerId);
     }
 
-    public List<ItemDto> ItemToItemDtoList(List<Item> items) {
+    public List<ItemDto> itemToItemDtoList(List<Item> items) {
         return items.stream()
                 .map(ItemMapper::itemToItemDto)
                 .collect(Collectors.toList());
