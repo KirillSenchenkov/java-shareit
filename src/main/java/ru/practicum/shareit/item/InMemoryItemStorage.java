@@ -29,7 +29,7 @@ public class InMemoryItemStorage implements ItemStorage {
         if (!items.containsKey(id)) {
             throw new NotFoundException("Предмет не найден");
         }
-        if (items.get(id).getOwnerId() != ownerId) {
+        if (items.get(id).getOwnerId().equals(ownerId)) {
             throw new ItemNotOwnedByUserException("Предмет не принадлежит пользователю");
         }
         if (updatedItem.getName() == null) {
