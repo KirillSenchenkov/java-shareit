@@ -26,10 +26,11 @@ public class InMemoryItemStorage implements ItemStorage {
 
     @Override
     public void updateItem(Long id, Item updatedItem, Long ownerId) {
+
         if (!items.containsKey(id)) {
             throw new NotFoundException("Предмет не найден");
         }
-        if (items.get(id).getOwnerId().equals(ownerId)) {
+        if (!items.get(id).getOwnerId().equals(ownerId)) {
             throw new ItemNotOwnedByUserException("Предмет не принадлежит пользователю");
         }
         if (updatedItem.getName() == null) {

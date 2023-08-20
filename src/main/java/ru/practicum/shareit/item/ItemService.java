@@ -26,6 +26,7 @@ public class ItemService {
     }
 
     public Item updateItem(Long id, ItemDto itemDto, Long ownerId) {
+
         itemStorage.updateItem(id, ItemMapper.itemDtoToItem(id, itemDto, ownerId), ownerId);
         return itemStorage.getTargetItem(id);
     }
