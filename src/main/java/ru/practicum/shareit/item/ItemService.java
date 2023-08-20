@@ -8,7 +8,6 @@ import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserStorage;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -27,7 +26,7 @@ public class ItemService {
     }
 
     public Item updateItem(Long id, ItemDto itemDto, Long ownerId) {
-        itemStorage.updateItem(id,ItemMapper.ItemDtoToItem(id, itemDto, ownerId), ownerId);
+        itemStorage.updateItem(id, ItemMapper.ItemDtoToItem(id, itemDto, ownerId), ownerId);
         return itemStorage.getTargetItem(id);
     }
 

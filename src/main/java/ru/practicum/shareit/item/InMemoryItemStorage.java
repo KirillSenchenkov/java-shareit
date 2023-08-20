@@ -16,6 +16,7 @@ public class InMemoryItemStorage implements ItemStorage {
     private long itemId = 0;
 
     private final Map<Long, Item> items = new HashMap<>();
+
     @Override
     public void createItem(Item item) {
         itemId++;
@@ -71,11 +72,11 @@ public class InMemoryItemStorage implements ItemStorage {
     @Override
     public List<Item> searchItemByText(String text) {
         if (text.isBlank()) {
-            throw new NotFoundException("Ничего не найдено, необходимо задать текст поиска");
+            return List.of();
         }
         return items.values().stream()
-                .filter(item -> item.getName().toLowerCase().contains(text.toLowerCase())
-                        || item.getDescription().toLowerCase().contains(text.toLowerCase()))
+                .filter(item -> item.getAvailable() && (item.getName().toLowerCase().contains(text.toLowerCase())
+                        || item.getDescription().toLowerCase().contains(text.toLowerCase())))
                 .collect(Collectors.toList());
     }
 }

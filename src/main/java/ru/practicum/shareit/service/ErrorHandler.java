@@ -9,8 +9,6 @@ import ru.practicum.shareit.exception.NotFoundException;
 
 import java.util.Map;
 
-
-
 @RestControllerAdvice
 public class ErrorHandler {
     @ExceptionHandler({ItemNotOwnedByUserException.class, NotFoundException.class})
