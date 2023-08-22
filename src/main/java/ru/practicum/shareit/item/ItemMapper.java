@@ -17,10 +17,4 @@ public class ItemMapper {
     public Item itemDtoToItem(Long id, ItemDto itemDto, Long ownerId) {
         return new Item(id, itemDto.getName(), itemDto.getDescription(), itemDto.getAvailable(), ownerId);
     }
-
-    public List<ItemDto> itemToItemDtoList(List<Item> items) {
-        return items.stream()
-                .map(ItemMapper::itemToItemDto)
-                .collect(Collectors.toList());
-    }
 }
