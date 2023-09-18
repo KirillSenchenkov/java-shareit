@@ -24,7 +24,7 @@ public class UserService {
     }
 
     public User updateUser(Long id, UserDto userDto) {
-        if (!userRepository.existsById(id)) {
+        if (userRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Пользователь не найден в системе");
         }
         if (userRepository.findUserByEmail(userDto.getEmail()).isPresent()
@@ -40,16 +40,16 @@ public class UserService {
     }
 
     public String deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
+        if (userRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Пользователь не найден в системе");
         }
-        userRepository.delete(userRepository.getById(id));
+        userRepository.delete(userRepository.findById(id).get());
         return String.format("Пользователь с id %s удален", id);
     }
 
 
     public User getTargetUser(Long id) {
-        if (!userRepository.existsById(id)) {
+        if (userRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Пользователь не найден в системе");
         }
         return userRepository.findById(id).get();

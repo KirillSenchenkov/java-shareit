@@ -3,9 +3,9 @@ package ru.practicum.shareit.item;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.booking.BookingStatus;
+import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.comment.CommentRepository;
 import ru.practicum.shareit.comment.dto.CommentDto;
 import ru.practicum.shareit.comment.model.Comment;
@@ -45,7 +45,7 @@ public class ItemService {
     }
 
     public Item updateItem(Long id, ItemDto itemDto, Long userId) {
-        if ((!userRepository.existsById(userId)) || (!itemRepository.existsById(id))
+        if ((!userRepository.existsById(userId)) || (itemRepository.findById(id).isEmpty())
                 || (!Objects.equals(itemRepository.findById(id).get().getOwnerId(), userId))) {
             throw new NotFoundException("Пользователь или предмет отсутствуют в системе," +
                     " или предмет не принадлежит пользователю");
@@ -62,17 +62,17 @@ public class ItemService {
     }
 
 
-    public String deleteItem(Long id) {
-        if (!itemRepository.existsById(id)) {
+    public String deleteItem(Long itemId) {
+        if (itemRepository.findById(itemId).isEmpty()) {
             throw new NotFoundException("Предмет не найден в системе");
         }
-        itemRepository.delete(itemRepository.getById(id));
-        return String.format("Предмет с id %s удален из системы", id);
+        itemRepository.delete(itemRepository.findById(itemId).get());
+        return String.format("Предмет с id %s удален из системы", itemId);
     }
 
     @Transactional(readOnly = true)
     public Item getItemById(Long itemId) {
-        if (!itemRepository.existsById(itemId)) {
+        if (itemRepository.findById(itemId).isEmpty()) {
             throw new NotFoundException("Предмет не найден");
         }
         return itemRepository.findById(itemId).get();
@@ -106,6 +106,7 @@ public class ItemService {
         List<ItemDto> itemsDto = items.stream()
                 .map(itemMapper::itemToItemDto)
                 .collect(Collectors.toList());
+        List<Long> ownerItemsDtoId = new ArrayList<>();
         for (ItemDto itemDto : itemsDto) {
             Long itemDtoId = itemDto.getId();
             itemDto.setLastBooking(getLastBookingForItem(itemDtoId));
@@ -129,10 +130,10 @@ public class ItemService {
         if (commentDto.getText().equals("")) {
             throw new BadEntityException("Невозможно оставить пустой комментарий");
         }
-        if (!itemRepository.existsById(itemId)) {
+        if (itemRepository.findById(itemId).isEmpty()) {
             throw new NotFoundException("Предмет не найден в системе");
         }
-        if (!userRepository.existsById(userId)) {
+        if (userRepository.findById(userId).isEmpty()) {
             throw new NotFoundException("Пользователь не найден в системе");
         }
         List<Booking> list = bookingRepository.findByBookerIdAndStatusAndEndBeforeOrderByIdDesc(userId,
@@ -152,6 +153,10 @@ public class ItemService {
 
     }
 
+    @Transactional(readOnly = true)
+    public Boolean findUserById(Long userId) {
+        return userRepository.existsById(userId);
+    }
 
     private ItemBookingDto getLastBookingForItem(Long itemId) {
         List<Booking> bookings = bookingRepository.findByItemIdAndStartBeforeAndStatusOrderByEndDesc(itemId,
@@ -181,10 +186,5 @@ public class ItemService {
                 .collect(Collectors.toList());
         Booking booking = bookingsOrdered.get(0);
         return new ItemBookingDto(booking.getId(), booking.getBooker().getId());
-    }
-
-    @Transactional(readOnly = true)
-    public Boolean findUserById(Long userId) {
-        return userRepository.existsById(userId);
     }
 }

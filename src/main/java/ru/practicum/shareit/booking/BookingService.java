@@ -52,7 +52,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public Booking getBookingById(Long bookingId, Long userId) {
-        if ((!bookingRepository.existsById(bookingId)) || (!itemService.findUserById(userId))) {
+        if ((bookingRepository.findById(bookingId).isEmpty()) || (!itemService.findUserById(userId))) {
             throw new NotFoundException("Бронь отсутствует в системе");
         }
         Booking booking = bookingRepository.findById(bookingId).get();
@@ -122,12 +122,13 @@ public class BookingService {
     }
 
     public Booking approve(Long bookingId, Long userId, Boolean bool) {
-        if ((!userService.isExistUserById(userId)) || (!bookingRepository.existsById(bookingId))
+        if ((!userService.isExistUserById(userId)) || (bookingRepository.findById(bookingId).isEmpty())
                 || (!Objects.equals(bookingRepository.findById(bookingId).get().getItem().getOwnerId(), userId))) {
-            throw new NotFoundException("Бронь не найдена в системе");
+            throw new NotFoundException("Пользователь или предмет отсутствуют в системе, " +
+                    "или предмет забронирован другим пользователем");
         }
         Booking booking = bookingRepository.findById(bookingId).get();
-        if (booking.getStatus().equals(BookingStatus.APPROVED)) {
+        if (BookingStatus.APPROVED.equals(booking.getStatus())) {
             throw new BadEntityException("Предмет уже забронирован");
         }
         if (bool) {
