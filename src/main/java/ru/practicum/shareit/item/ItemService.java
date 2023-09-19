@@ -106,12 +106,49 @@ public class ItemService {
         List<ItemDto> itemsDto = items.stream()
                 .map(itemMapper::itemToItemDto)
                 .collect(Collectors.toList());
-        List<Long> ownerItemsDtoId = new ArrayList<>();
+        List<Booking> previousBookings = bookingRepository
+                .findAllByItemIdInAndStartBeforeAndStatusOrderByItemIdAsc(
+                        items.stream()
+                                .map(Item::getId)
+                                .collect(Collectors.toList()),
+                        LocalDateTime.now(), BookingStatus.APPROVED
+                );
+        List<Booking> subsequentBookings = bookingRepository
+                .findAllByItemIdInAndStartAfterAndStatusOrderByItemIdAsc(
+                        items.stream()
+                                .map(Item::getId)
+                                .collect(Collectors.toList()),
+                        LocalDateTime.now(), BookingStatus.APPROVED
+                );
+        Map<Long, List<Booking>> previousBookingsMap = previousBookings.stream()
+                .collect(Collectors.groupingBy(booking -> booking.getItem().getId()));
+        Map<Long, List<Booking>> subsequentBookingsMap = subsequentBookings.stream()
+                .collect(Collectors.groupingBy(booking -> booking.getItem().getId()));
+
         for (ItemDto itemDto : itemsDto) {
-            Long itemDtoId = itemDto.getId();
-            itemDto.setLastBooking(getLastBookingForItem(itemDtoId));
-            itemDto.setNextBooking(getFutureBookingFotItem(itemDtoId));
+            List<Booking> previousBooking = previousBookingsMap.get(itemDto.getId());
+            if (previousBooking != null && !previousBooking.isEmpty()) {
+                Booking booking = previousBooking.stream()
+                        .sorted(Comparator.comparing(Booking::getEnd).reversed())
+                        .limit(1)
+                        .collect(Collectors.toList()).get(0);
+                itemDto.setLastBooking(new ItemBookingDto(booking.getId(), booking.getBooker().getId()));
+            } else {
+                itemDto.setLastBooking(null);
+            }
+
+            List<Booking> subsequentBooking = subsequentBookingsMap.get(itemDto.getId());
+            if (subsequentBooking != null && !subsequentBookings.isEmpty()) {
+                Booking booking = subsequentBooking.stream()
+                        .sorted(Comparator.comparing(Booking::getStart))
+                        .limit(1)
+                        .collect(Collectors.toList()).get(0);
+                itemDto.setNextBooking(new ItemBookingDto(booking.getId(), booking.getBooker().getId()));
+            } else {
+                itemDto.setNextBooking(null);
+            }
         }
+
         return itemsDto;
     }
 
