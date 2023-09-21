@@ -3,31 +3,33 @@ package ru.practicum.shareit.item.dto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import ru.practicum.shareit.comment.dto.CommentDto;
-import ru.practicum.shareit.service.Create;
-import ru.practicum.shareit.service.Update;
+import ru.practicum.shareit.user.dto.UserDto;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 public class ItemDto {
 
-    private Long id;
-    @NotBlank(groups = Create.class)
-    private String name;
-    @NotBlank(groups = Create.class)
-    @Size(max = 200, message = "максимальная длина описания - 200 символов", groups = {Create.class, Update.class})
-    private String description;
-    @NotNull(groups = Create.class)
-    private Boolean available;
+    private long id;
 
-    private Long ownerId;
+    @NotBlank(message = "Item name absent")
+    @Size(max = 255)
+    private String name;
+
+    @NotBlank(message = "Item description absent")
+    @Size(max = 255)
+    private String description;
+
+    @NotNull(message = "Item availability absent")
+    private boolean available;
 
     private Long requestId;
 
@@ -35,5 +37,7 @@ public class ItemDto {
 
     private ItemBookingDto nextBooking;
 
-    private List<CommentDto> comments = new ArrayList<>();
+    private Set<CommentDto> comments;
+
+    private UserDto owner;
 }

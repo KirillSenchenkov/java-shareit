@@ -1,139 +1,178 @@
 package ru.practicum.shareit.booking;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
+import ru.practicum.shareit.booking.dto.BookingDtoWithId;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.exception.BadEntityException;
+import ru.practicum.shareit.exception.ItemNotOwnedByUserException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.UnknownStateException;
-import ru.practicum.shareit.item.ItemService;
+import ru.practicum.shareit.item.ItemMapper;
+import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.user.UserService;
-import ru.practicum.shareit.user.model.User;
+import ru.practicum.shareit.user.UserMapper;
+import ru.practicum.shareit.user.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class BookingService {
 
     private final BookingRepository bookingRepository;
-    private final ItemService itemService;
-    private final UserService userService;
+
+    private final UserRepository userRepository;
+
+    private final ItemRepository itemRepository;
+
     private final BookingMapper bookingMapper;
 
-    public Booking createBooking(BookingDto bookingDto, Long ownerId) {
-        Item item = itemService.getItemById(bookingDto.getItemId());
-        User user = userService.getTargetUser(ownerId);
+    private final ItemMapper itemMapper;
 
-        if (!(bookingDto.getEnd().isAfter(bookingDto.getStart()))) {
-            throw new BadEntityException("Конец бронирования не может быть раньше чем его начало");
-        }
+    private final UserMapper userMapper;
 
-        Booking booking = bookingMapper.bookingDtoToBooking(bookingDto, user, item);
+    public BookingDto save(BookingDtoWithId bookingDto, Long userId) {
+        checkUserExists(userId);
+        Booking booking = toBookingWithItemAndBooker(bookingDto, userId);
+        checkBookingBasicConstraints(booking, userId);
+        booking.setStatus(BookingStatus.WAITING);
+        return toDtoWithItemAndBooker(bookingRepository.save(booking));
+    }
 
-        if (!itemService.findUserById(ownerId)) {
-            throw new NotFoundException("Пользователь не найден в системе");
+    public BookingDto changeBookingStatus(Long bookingId, Boolean isApproved, Long requesterId) {
+        Booking booking = bookingRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Бронирование с  id " + bookingId + " не найдено"));
+
+        if (!Objects.equals(booking.getItem().getOwner().getId(), requesterId)) {
+            throw new ItemNotOwnedByUserException("Статус бронирования может менять только владелец");
         }
-        if (!item.getAvailable()) {
-            throw new BadEntityException("Бронирование не доступно для предмета");
+        BookingStatus newStatus = Boolean.TRUE.equals(isApproved) ? BookingStatus.APPROVED : BookingStatus.REJECTED;
+        if (booking.getStatus().equals(newStatus)) {
+            throw new BadEntityException("Статус бронирования уже изменен");
         }
-        if (item.getOwnerId().equals(ownerId)) {
-            throw new NotFoundException("Предмет не принадлежит пользователю");
-        }
+        booking.setStatus(newStatus);
         bookingRepository.save(booking);
+        return toDtoWithItemAndBooker(booking);
+    }
+
+    public BookingDto getBooking(Long requesterId, Long bookingId) {
+        Booking booking = bookingRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Бронирование с id " + bookingId + " не найдено"));
+        checkItemOwner(booking, requesterId);
+        return toDtoWithItemAndBooker(booking);
+    }
+
+    public List<BookingDto> getBookingByState(Long ownerId, String state, Pageable pageable) {
+        checkUserExists(ownerId);
+        checkState(state);
+        BookingSearchType type = BookingSearchType.valueOf(state);
+        BookingSearch bookingSearch = new BookingSearch(bookingRepository);
+        return bookingSearch
+                .getBookings(ownerId, type, pageable)
+                .stream()
+                .map(this::toDtoWithItemAndBooker)
+                .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
+    }
+
+    public List<BookingDto> getBookingByStateAndOwner(Long ownerId, String state, Pageable pageable) {
+        checkUserExists(ownerId);
+        checkState(state);
+        BookingSearchType type = BookingSearchType.valueOf(state);
+        BookingSearch bookingSearch = new BookingSearch(bookingRepository);
+
+        return bookingSearch
+                .getBookingsByItemsOwner(ownerId, type, pageable)
+                .stream()
+                .map(this::toDtoWithItemAndBooker)
+                .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
+    }
+
+    private Booking toBookingWithItemAndBooker(BookingDtoWithId bookingDto, Long userId) {
+        Booking booking = bookingMapper.bookingDtotoBooking(bookingDto);
+        Long itemId = bookingDto.getItemId();
+        if (itemRepository.findById(itemId).isEmpty()
+                || userRepository.findById(userId).isEmpty()) {
+            throw new NotFoundException("Пользователь или предмет не найдены в системе");
+        }
+        booking.setItem(itemRepository.findById(itemId).get());
+        booking.setBooker(userRepository.findById(userId).get());
         return booking;
     }
 
-    @Transactional(readOnly = true)
-    public Booking getBookingById(Long bookingId, Long userId) {
-        if ((bookingRepository.findById(bookingId).isEmpty()) || (!itemService.findUserById(userId))) {
-            throw new NotFoundException("Бронь отсутствует в системе");
-        }
-        Booking booking = bookingRepository.findById(bookingId).get();
-        if (!((Objects.equals(booking.getBooker().getId(), userId)) || (Objects.equals(booking.getItem().getOwnerId(), userId)))) {
-            throw new NotFoundException("Предмет не принадлежит пользователю");
-        }
-        return booking;
+    private BookingDto toDtoWithItemAndBooker(Booking booking) {
+        BookingDto bookingDto = bookingMapper.bookingtoBookingDto(booking);
+        bookingDto.setItem(itemMapper.itemToItemDto(booking.getItem()));
+        bookingDto.setBooker(userMapper.usertoUserDto(booking.getBooker()));
+        return bookingDto;
     }
 
-    @Transactional(readOnly = true)
-    public List<Booking> getBookings(Long userId, String state) {
-        if (!itemService.findUserById(userId)) {
+    private void checkItemOwner(Booking booking, Long requesterId) {
+        if (!Objects.equals(booking.getBooker().getId(), requesterId)
+                && !Objects.equals(booking.getItem().getOwner().getId(), requesterId)) {
+            throw new ItemNotOwnedByUserException("Бронирование может быть изменено" +
+                    " только владельцем предмета или автором");
+        }
+    }
+
+    private void checkBookingBasicConstraints(Booking booking, Long requesterId) {
+        checkUserExists(requesterId);
+        Long itemId = booking.getItem().getId();
+        if (itemRepository.findById(itemId).isEmpty()) {
+            throw new NotFoundException("Предмет не найден в системе");
+        }
+        Item item = itemRepository.findById(itemId).get();
+        if (Objects.equals(booking.getStart(), null)) {
+            throw new BadEntityException("Booking start should be not null");
+        }
+        if (Objects.equals(booking.getEnd(), null)) {
+            throw new BadEntityException("Booking end should be not null");
+        }
+        if (Objects.equals(item.getOwner().getId(), requesterId)) {
+            throw new ItemNotOwnedByUserException("Owner want to book his/ her Item");
+        }
+        LocalDateTime start = booking.getStart();
+        LocalDateTime end = booking.getEnd();
+
+        if (end.isBefore(start)
+                || Objects.equals(start, end)
+                || end.isBefore(LocalDateTime.now())
+                || start.isBefore(LocalDateTime.now())) {
+            throw new BadEntityException("Booking start should be less than End and not be in past");
+        }
+        if (Boolean.FALSE.equals(item.getAvailable())) {
+            throw new BadEntityException("Booking can't be made to unavailable item");
+        }
+
+        List<Booking> bookings = bookingRepository.searchByItemIdAndStartAddEnd(item.getId(),
+                booking.getStart(), booking.getEnd());
+
+        if (bookings.stream().anyMatch(b -> b.getStatus().equals(BookingStatus.WAITING)
+                || b.getStatus().equals(BookingStatus.APPROVED))) {
+            throw new BadEntityException("Booking can't be made to one item more than one time");
+        }
+    }
+
+    private void checkUserExists(Long id) {
+        if (userRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Пользователь не найден в системе");
         }
-        switch (state) {
-            case "ALL":
-                return bookingRepository.findByBookerIdOrderByIdDesc(userId);
-
-            case "CURRENT":
-                return bookingRepository.findByBookerIdAndEndAfterAndStartBeforeOrderByStartDesc(userId,
-                        LocalDateTime.now(), LocalDateTime.now());
-
-            case "PAST":
-                return bookingRepository.findByBookerIdAndEndBeforeOrderByStartDesc(userId, LocalDateTime.now());
-
-            case "FUTURE":
-                return bookingRepository.findByBookerIdAndStartAfterOrderByStartDesc(userId, LocalDateTime.now());
-
-            case "WAITING":
-                return bookingRepository.findByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.WAITING);
-
-            case "REJECTED":
-                return bookingRepository.findByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.REJECTED);
-
-            default:
-                throw new UnknownStateException("Unknown state: " + state);
-        }
     }
 
-    @Transactional(readOnly = true)
-    public List<Booking> getBookingsByOwner(Long userId, String state) {
-        if (!itemService.findUserById(userId)) {
-            throw new NotFoundException("Пользователь не найден в системе");
+    private void checkState(String state) {
+        List<String> types = Arrays.stream(BookingSearchType.values())
+                .map(Enum::toString)
+                .collect(Collectors.toList());
+        if (!types.contains(state)) {
+            throw new BadEntityException("Unknown state: UNSUPPORTED_STATUS");
         }
-        switch (state) {
-            case "ALL": {
-                return bookingRepository.findByItemOwnerIdOrderByIdDesc(userId);
-            }
-            case "CURRENT": {
-                return bookingRepository.findByItemOwnerIdAndEndAfterAndStartBeforeOrderByStartDesc(userId, LocalDateTime.now(), LocalDateTime.now());
-            }
-            case "PAST": {
-                return bookingRepository.findByItemOwnerIdAndEndBeforeOrderByStartDesc(userId, LocalDateTime.now());
-            }
-            case "FUTURE": {
-                return bookingRepository.findByItemOwnerIdAndStartAfterOrderByStartDesc(userId, LocalDateTime.now());
-            }
-            case "WAITING": {
-                return bookingRepository.findByItemOwnerIdAndStatusOrderByStartDesc(userId, BookingStatus.WAITING);
-            }
-            case "REJECTED": {
-                return bookingRepository.findByItemOwnerIdAndStatusOrderByStartDesc(userId, BookingStatus.REJECTED);
-            }
-            default:
-                throw new UnknownStateException("Unknown state: " + state);
-        }
-    }
-
-    public Booking approve(Long bookingId, Long userId, Boolean bool) {
-        if ((!userService.isExistUserById(userId)) || (bookingRepository.findById(bookingId).isEmpty())
-                || (!Objects.equals(bookingRepository.findById(bookingId).get().getItem().getOwnerId(), userId))) {
-            throw new NotFoundException("Пользователь или предмет отсутствуют в системе, " +
-                    "или предмет забронирован другим пользователем");
-        }
-        Booking booking = bookingRepository.findById(bookingId).get();
-        if (BookingStatus.APPROVED.equals(booking.getStatus())) {
-            throw new BadEntityException("Предмет уже забронирован");
-        }
-        if (bool) {
-            booking.setStatus(BookingStatus.APPROVED);
-        } else booking.setStatus(BookingStatus.REJECTED);
-        return bookingRepository.save(booking);
     }
 }

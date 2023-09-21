@@ -1,8 +1,7 @@
 package ru.practicum.shareit.booking.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
 import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.model.User;
@@ -10,31 +9,37 @@ import ru.practicum.shareit.user.model.User;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Data
 @Entity
+@Getter
+@Setter
+@Table(name = "bookings")
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "bookings")
+@Builder(toBuilder = true)
 public class Booking {
 
     @Id
+    @Column(nullable = false, updatable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "start_date")
+    @Column(name = "start_date", nullable = false)
     private LocalDateTime start;
 
-    @Column(name = "end_date")
+    @Column(name = "end_date", nullable = false)
     private LocalDateTime end;
 
-    @ManyToOne
-    @JoinColumn(name = "item_id")
+    @Column(length = 12)
+    @Enumerated(EnumType.STRING)
+    private BookingStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "item_id", nullable = false)
+    @JsonIgnore
     private Item item;
 
-    @ManyToOne
-    @JoinColumn(name = "booker_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booker_id", nullable = false)
+    @JsonIgnore
     private User booker;
-
-    @Enumerated
-    private BookingStatus status;
 }
