@@ -3,6 +3,8 @@ package ru.practicum.shareit.request.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.user.dto.UserDto;
@@ -12,7 +14,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class ItemRequestWithOfferDto {
+@AllArgsConstructor
+@Builder(toBuilder = true)
+public final class ItemRequestWithOfferDto {
     private final Long id;
 
     @NotBlank
@@ -24,5 +28,5 @@ public class ItemRequestWithOfferDto {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private final LocalDateTime created;
 
-    private List<ItemDto> items;
+    private final List<ItemDto> items;
 }

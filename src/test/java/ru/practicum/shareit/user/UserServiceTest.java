@@ -150,8 +150,7 @@ class UserServiceTest {
         User user = createUser();
         User updatedUser = createUser();
         updatedUser.setName(String.valueOf(updates.get("name")));
-        UserDto updatedUserDto = createUserDto();
-        updatedUserDto.setName(String.valueOf(updates.get("name")));
+        UserDto updatedUserDto = createUserDtoUpdated((String) updates.get("name"));
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenReturn(updatedUser);
         when(userMapper.usertoUserDto(any())).thenReturn(updatedUserDto);
@@ -173,9 +172,8 @@ class UserServiceTest {
 
         User user = createUser();
         User updatedUser = createUser();
-        updatedUser.setName(String.valueOf(updates.get("email")));
-        UserDto updatedUserDto = createUserDto();
-        updatedUserDto.setName(String.valueOf(updates.get("email")));
+        updatedUser.setName((String) updates.get("email"));
+        UserDto updatedUserDto = createUserDtoUpdated((String) updates.get("email"));
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenReturn(updatedUser);
         when(userMapper.usertoUserDto(any())).thenReturn(updatedUserDto);
@@ -199,6 +197,14 @@ class UserServiceTest {
         return UserDto.builder()
                 .id(1L)
                 .name("Kirill")
+                .email("Kirill@nmicrk.ru")
+                .build();
+    }
+
+    private UserDto createUserDtoUpdated(String name) {
+        return UserDto.builder()
+                .id(1L)
+                .name(name)
                 .email("Kirill@nmicrk.ru")
                 .build();
     }

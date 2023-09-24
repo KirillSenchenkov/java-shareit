@@ -22,7 +22,10 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -112,12 +115,11 @@ class ItemControllerTest {
 
     @Test
     void update_StandardBehavior() throws Exception {
-        ItemDto itemDtoWithUpdates = createItemDto();
+
 
         Map<String, Object> updates = Map.of("name", "ноутбук", "description", "для офисных задач");
-
-        itemDtoWithUpdates.setName((String) updates.get("name"));
-        itemDtoWithUpdates.setName((String) updates.get("description"));
+        ItemDto itemDtoWithUpdates = createItemDtoUpdated((String) updates.get("name"),
+                (String) updates.get("description"));
         when(itemService.updateItem(anyLong(), anyLong(), any())).thenReturn(itemDtoWithUpdates);
 
         mockMvc.perform(patch("/items/{id}", 2L)
@@ -145,6 +147,16 @@ class ItemControllerTest {
                 .id(2L)
                 .name("ноутбук")
                 .description("ультратонкий")
+                .available(true)
+                .owner(createOwnerDto())
+                .requestId(3L)
+                .build();
+    }
+    private ItemDto createItemDtoUpdated(String one, String two) {
+        return ItemDto.builder()
+                .id(2L)
+                .name(one)
+                .description(two)
                 .available(true)
                 .owner(createOwnerDto())
                 .requestId(3L)

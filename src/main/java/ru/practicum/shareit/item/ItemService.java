@@ -21,7 +21,15 @@ import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,16 +50,17 @@ public class ItemService {
         if (userRepository.findById(ownerId).isEmpty()) {
             throw new NotFoundException("Пользователь, для которого создается предмет, не найден в системе");
         }
-        itemDto.setOwner(userMapper.usertoUserDto(userRepository.findById(ownerId).get()));
-        Item item = itemRepository.save(itemMapper.itemDtotoItem(itemDto));
-        return itemMapper.itemToItemDto(item);
+        Item item = itemMapper.itemDtoToItem(itemDto, userRepository.findById(ownerId).get());
+        item.setOwner(userRepository.findById(ownerId).get());
+        itemRepository.save(item);
+        return itemMapper.itemToItemDto(item, userMapper.usertoUserDto(item.getOwner()));
     }
 
     public ItemDto updateItem(Long userId, Long id, Map<String, Object> updates) {
         checkUserExists(userId);
         checkItemExists(id);
         checkItemOwnerId(userId, id);
-        Item item = itemMapper.itemDtotoItem(getTargetItem(id, userId));
+        Item item = itemMapper.itemDtoToItem(getTargetItem(id, userId), userRepository.getReferenceById(userId));
         if (updates.containsKey("name")) {
             item.setName(String.valueOf(updates.get("name")));
         }
@@ -62,7 +71,7 @@ public class ItemService {
             item.setAvailable(Boolean.parseBoolean(String.valueOf(updates.get("available"))));
         }
         itemRepository.save(item);
-        return itemMapper.itemToItemDto(item);
+        return itemMapper.itemToItemDto(item, userMapper.usertoUserDto(item.getOwner()));
     }
 
 
@@ -71,33 +80,60 @@ public class ItemService {
             throw new NotFoundException("Предмет не найден в системе");
         }
         Item item = itemRepository.findById(id).get();
-        ItemDto itemDto = itemMapper.itemToItemDto(item);
+        ItemDto itemDto = itemMapper.itemToItemDto(item,
+                userMapper.usertoUserDto(userRepository.findById(item.getOwner().getId())
+                        .orElseThrow(() -> new NotFoundException("Пользователь отсутствует в системе"))));
         itemRepository.delete(item);
         return itemDto;
     }
 
-
-    public Item getItemById(Long itemId) {
+    public ItemDto getItemById(Long itemId) {
         if (itemRepository.findById(itemId).isEmpty()) {
             throw new NotFoundException("Предмет не найден в системе");
         }
-        return itemRepository.findById(itemId).get();
+        Item item = itemRepository.findById(itemId).get();
+        return itemMapper.itemToItemDto(item, userMapper.usertoUserDto(item.getOwner()));
     }
 
-
     public ItemDto getTargetItem(Long itemId, Long userId) {
-        checkUserExists(userId);
         if (itemRepository.findById(itemId).isEmpty()) {
-            throw new NotFoundException("Предмет отсутствует в системе");
+            throw new NotFoundException("Предмет или пользователь отсутствуют в системе");
         }
         Item item = itemRepository.findById(itemId).get();
-        ItemDto itemDto = itemMapper.itemToItemDto(item);
-        itemDto.setComments(commentMapper.commentsToCommentsDto(item.getItemComments()));
-        if (Objects.equals(userId, item.getOwner().getId())) {
-            itemDto.setLastBooking(getLastBookingForItem(itemId));
-            itemDto.setNextBooking(getFutureBookingFotItem(itemId));
+        Booking lastBooking = bookingRepository.searchFirstByItemIdAndStartBeforeAndStatusOrderByEndDesc(itemId,
+                LocalDateTime.now(), BookingStatus.APPROVED).orElse(null);
+        Booking nextBooking = bookingRepository.searchFirstByItemIdAndStartAfterAndStatusOrderByStartAsc(itemId,
+                LocalDateTime.now(), BookingStatus.APPROVED).orElse(null);
+        Set<CommentDto> comments;
+        if (commentRepository.findAllByItemId(itemId).isEmpty()) {
+            comments = new HashSet<>();
+        } else {
+            comments = commentMapper.commentsToCommentsDto(commentRepository.findAllByItemId(itemId));
         }
-        return itemDto;
+        if (Objects.equals(userId, item.getOwner().getId())) {
+            if (lastBooking != null && nextBooking != null) {
+                return itemMapper.itemToItemDtoWithBookingAndComments(item, userMapper
+                                .usertoUserDto(userRepository.getReferenceById(userId)),
+                        new ItemBookingDto(lastBooking.getId(), lastBooking.getBooker().getId()),
+                        new ItemBookingDto(nextBooking.getId(), nextBooking.getBooker().getId()), comments);
+            } else if (lastBooking == null && nextBooking != null) {
+                return itemMapper.itemToItemDtoWithBookingAndComments(item, userMapper
+                                .usertoUserDto(userRepository.getReferenceById(userId)),
+                        null,
+                        new ItemBookingDto(nextBooking.getId(), nextBooking.getBooker().getId()), comments);
+            } else if (lastBooking != null) {
+                return itemMapper.itemToItemDtoWithBookingAndComments(item, userMapper
+                                .usertoUserDto(userRepository.getReferenceById(userId)),
+                        new ItemBookingDto(lastBooking.getId(), lastBooking.getBooker().getId()),
+                        null, comments);
+            } else {
+                return itemMapper.itemToItemDtoWithBookingAndComments(item, userMapper
+                                .usertoUserDto(userRepository.getReferenceById(userId)),
+                        null, null, comments);
+            }
+        } else {
+            return itemMapper.itemToItemDtoWithComments(item, userMapper.usertoUserDto(item.getOwner()), comments);
+        }
     }
 
 
@@ -106,9 +142,7 @@ public class ItemService {
         if (items.isEmpty()) {
             return new ArrayList<>();
         }
-        List<ItemDto> itemsDto = items.stream()
-                .map(itemMapper::itemToItemDto)
-                .collect(Collectors.toList());
+        List<ItemDto> itemsDto = new ArrayList<>();
         List<Booking> previousBookings = bookingRepository
                 .searchAllByItemIdInAndStartBeforeAndStatusOrderByItemIdAsc(
                         items.stream()
@@ -128,30 +162,42 @@ public class ItemService {
         Map<Long, List<Booking>> subsequentBookingsMap = subsequentBookings.stream()
                 .collect(Collectors.groupingBy(booking -> booking.getItem().getId()));
 
-        for (ItemDto itemDto : itemsDto) {
-            List<Booking> previousBooking = previousBookingsMap.get(itemDto.getId());
-            if (previousBooking != null && !previousBooking.isEmpty()) {
-                Booking booking = previousBooking.stream()
+        for (Item item : items) {
+            List<Booking> previousBooking = previousBookingsMap.get(item.getId());
+            List<Booking> subsequentBooking = subsequentBookingsMap.get(item.getId());
+            if ((previousBooking != null && !previousBooking.isEmpty())
+                    && (subsequentBooking != null && !subsequentBookings.isEmpty())) {
+                Booking lastBooking = previousBooking.stream()
                         .sorted(Comparator.comparing(Booking::getEnd).reversed())
                         .limit(1)
                         .collect(Collectors.toList()).get(0);
-                itemDto.setLastBooking(new ItemBookingDto(booking.getId(), booking.getBooker().getId()));
-            } else {
-                itemDto.setLastBooking(null);
-            }
-
-            List<Booking> subsequentBooking = subsequentBookingsMap.get(itemDto.getId());
-            if (subsequentBooking != null && !subsequentBookings.isEmpty()) {
-                Booking booking = subsequentBooking.stream()
+                Booking nextBooking = subsequentBooking.stream()
                         .sorted(Comparator.comparing(Booking::getStart))
                         .limit(1)
                         .collect(Collectors.toList()).get(0);
-                itemDto.setNextBooking(new ItemBookingDto(booking.getId(), booking.getBooker().getId()));
+                itemsDto.add(itemMapper.itemToItemDtoWithBookings(item, userMapper.usertoUserDto(item.getOwner()),
+                        new ItemBookingDto(lastBooking.getId(), lastBooking.getBooker().getId()),
+                        new ItemBookingDto(nextBooking.getId(), nextBooking.getBooker().getId())));
+            } else if ((previousBooking != null && !previousBooking.isEmpty())
+                    && (subsequentBooking == null && subsequentBookings.isEmpty())) {
+                Booking lastBooking = previousBooking.stream()
+                        .sorted(Comparator.comparing(Booking::getEnd).reversed())
+                        .limit(1)
+                        .collect(Collectors.toList()).get(0);
+                itemsDto.add(itemMapper.itemToItemDtoWithBookings(item, userMapper.usertoUserDto(item.getOwner()),
+                        new ItemBookingDto(lastBooking.getId(), lastBooking.getBooker().getId()), null));
+            } else if (subsequentBooking != null && !subsequentBookings.isEmpty()) {
+                Booking nextBooking = subsequentBooking.stream()
+                        .sorted(Comparator.comparing(Booking::getEnd).reversed())
+                        .limit(1)
+                        .collect(Collectors.toList()).get(0);
+                itemsDto.add(itemMapper.itemToItemDtoWithBookings(item, userMapper.usertoUserDto(item.getOwner()),
+                        null, new ItemBookingDto(nextBooking.getId(), nextBooking.getBooker().getId())));
             } else {
-                itemDto.setNextBooking(null);
+                itemsDto.add(itemMapper.itemToItemDtoWithBookings(item, userMapper.usertoUserDto(item.getOwner()),
+                        null, null));
             }
         }
-
         return itemsDto;
     }
 
@@ -165,10 +211,11 @@ public class ItemService {
 
         int firstId = Objects.isNull(from) ? 0 : from;
 
-        List<ItemDto> itemsDto = itemRepository.findByNameOrDescription(query)
-                .stream()
-                .map(itemMapper::itemToItemDto)
-                .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
+        List<Item> items = itemRepository.findByNameOrDescription(query);
+        List<ItemDto> itemsDto = new ArrayList<>();
+        for (Item item : items) {
+            itemsDto.add(itemMapper.itemToItemDto(item, userMapper.usertoUserDto(item.getOwner())));
+        }
 
         if (size != null) {
             int lastId = Math.min((from + size - 1), itemsDto.size());
@@ -199,41 +246,13 @@ public class ItemService {
         return commentMapper.commentToCommentDto(comment);
     }
 
-    private ItemBookingDto getLastBookingForItem(Long itemId) {
-        List<Booking> bookings = bookingRepository.searchByItemIdAndEndBeforeDate(itemId,
-                LocalDateTime.now(), BookingStatus.APPROVED);
-        if (bookings.isEmpty()) {
-            return null;
-        }
-        Comparator<Booking> byDateEnd = Comparator.comparing(Booking::getEnd).reversed();
-        List<Booking> bookingsSorted = bookings.stream()
-                .sorted(byDateEnd)
-                .limit(1)
-                .collect(Collectors.toList());
-        Booking booking = bookingsSorted.get(0);
-        return new ItemBookingDto(booking.getId(), booking.getBooker().getId());
-    }
-
-    private ItemBookingDto getFutureBookingFotItem(Long itemId) {
-        List<Booking> bookings = bookingRepository.searchByItemIdAndStartAfterDate(itemId,
-                LocalDateTime.now(), BookingStatus.APPROVED);
-        if (bookings.isEmpty()) {
-            return null;
-        }
-        Comparator<Booking> byDateStart = Comparator.comparing(Booking::getStart);
-        List<Booking> bookingsOrdered = bookings.stream()
-                .sorted(byDateStart)
-                .limit(1)
-                .collect(Collectors.toList());
-        Booking booking = bookingsOrdered.get(0);
-        return new ItemBookingDto(booking.getId(), booking.getBooker().getId());
-    }
-
     public List<ItemDto> getItemsByRequestId(Long requestId) {
-        return itemRepository.findByRequestIdOrderById(requestId)
-                .stream()
-                .map(itemMapper::itemToItemDto)
-                .collect(Collectors.toList());
+        List<Item> items = itemRepository.findByRequestIdOrderById(requestId);
+        List<ItemDto> itemsDto = new ArrayList<>();
+        for (Item item : items) {
+            itemsDto.add(itemMapper.itemToItemDto(item, userMapper.usertoUserDto(item.getOwner())));
+        }
+        return itemsDto;
     }
 
     private void checkUserExists(Long id) {

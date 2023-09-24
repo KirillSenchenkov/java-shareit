@@ -1,7 +1,6 @@
 package ru.practicum.shareit.booking;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -35,7 +34,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
-@Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -88,12 +86,13 @@ class BookingServiceTest {
         when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
 
         when(userMapper.usertoUserDto(any())).thenReturn(userDto);
-        when(itemMapper.itemToItemDto(any())).thenReturn(itemDto);
+        when(itemMapper.itemToItemDto(any(), any())).thenReturn(itemDto);
         when(bookingMapper.bookingDtotoBooking(any())).thenReturn(booking);
         when(bookingMapper.bookingtoBookingDto(any())).thenReturn(bookingDto);
+        when(bookingMapper.bookingToBookingDtoWithItemAndBooker(any(),any(),any())).thenReturn(bookingDto);
         when(bookingRepository.save(any())).thenReturn(booking);
 
-        BookingDto expectedBookingDto = bookingService.save(bookingDtoWithId, user.getId());
+        BookingDto expectedBookingDto = bookingService.createBooking(bookingDtoWithId, user.getId());
 
         assertThat(expectedBookingDto.getId(), equalTo(bookingDtoWithId.getId()));
         assertThat(expectedBookingDto.getStart(), equalTo(bookingDtoWithId.getStart()));
@@ -112,7 +111,7 @@ class BookingServiceTest {
         when(userRepository.existsById(anyLong())).thenReturn(false);
 
         NotFoundException itemDoesNotExistException
-                = assertThrows(NotFoundException.class, () -> bookingService.save(bookingDtoWithId, userId));
+                = assertThrows(NotFoundException.class, () -> bookingService.createBooking(bookingDtoWithId, userId));
         assertThat(itemDoesNotExistException.getMessage(), equalTo("Пользователь не найден в системе"));
     }
 
@@ -126,14 +125,14 @@ class BookingServiceTest {
         Long itemId = 4L;
         Booking booking = createBooking();
         BookingDtoWithId bookingDtoWithId = createBookingDtoWithId();
-        bookingDtoWithId.setItemId(itemId);
+        bookingDtoWithId.toBuilder().itemId(itemId).build();
 
         when(userRepository.existsById(anyLong())).thenReturn(true);
         when(itemRepository.existsById(anyLong())).thenReturn(false);
         when(bookingMapper.bookingDtotoBooking(any())).thenReturn(booking);
 
         NotFoundException notFoundException
-                = assertThrows(NotFoundException.class, () -> bookingService.save(bookingDtoWithId, userId));
+                = assertThrows(NotFoundException.class, () -> bookingService.createBooking(bookingDtoWithId, userId));
         assertThat(notFoundException.getMessage(), equalTo("Пользователь не найден в системе"));
     }
 

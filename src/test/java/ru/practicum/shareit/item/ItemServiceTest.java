@@ -77,8 +77,8 @@ class ItemServiceTest {
         ItemDto itemDto = createItemDto();
         when(userRepository.existsById(anyLong())).thenReturn(true);
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(owner));
-        when(itemMapper.itemDtotoItem(any())).thenReturn(item);
-        when(itemMapper.itemToItemDto(any())).thenReturn(itemDto);
+        when(itemMapper.itemDtoToItem(any(), any())).thenReturn(item);
+        when(itemMapper.itemToItemDto(any(), any())).thenReturn(itemDto);
 
         ItemDto expectedItemDto = itemService.createItem(owner.getId(), itemDto);
 
@@ -145,22 +145,22 @@ class ItemServiceTest {
         ReflectionTestUtils.setField(itemService, "itemRepository", itemRepository);
         ReflectionTestUtils.setField(itemService, "userRepository", userRepository);
         ReflectionTestUtils.setField(itemService, "bookingRepository", bookingRepository);
+        ReflectionTestUtils.setField(itemService, "commentRepository", commentRepository);
         ReflectionTestUtils.setField(itemService, "itemMapper", itemMapper);
-        ReflectionTestUtils.setField(itemService, "userMapper", userMapper);
         ReflectionTestUtils.setField(itemService, "commentMapper", commentMapper);
+        ReflectionTestUtils.setField(itemService, "userMapper", userMapper);
 
         Map<String, Object> updates = Map.of("name", "ноутбук");
 
         User owner = createOwner();
         Item item = createItem();
-        ItemDto itemDto = createItemDto();
-        itemDto.setName(String.valueOf(updates.get("name")));
+        ItemDto itemDto = createItemDtoUpdatedName((String) updates.get("name"));
         when(userRepository.existsById(anyLong())).thenReturn(true);
         when(itemRepository.existsById(anyLong())).thenReturn(true);
         when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
 
-        when(itemMapper.itemDtotoItem(any())).thenReturn(item);
-        when(itemMapper.itemToItemDto(any())).thenReturn(itemDto);
+        when(itemMapper.itemDtoToItem(any(), any())).thenReturn(item);
+        when(itemMapper.itemToItemDto(any(), any())).thenReturn(itemDto);
 
         ItemDto expectedItemDto = itemService.updateItem(owner.getId(), itemDto.getId(), updates);
 
@@ -178,20 +178,20 @@ class ItemServiceTest {
         ReflectionTestUtils.setField(itemService, "itemMapper", itemMapper);
         ReflectionTestUtils.setField(itemService, "userMapper", userMapper);
         ReflectionTestUtils.setField(itemService, "commentMapper", commentMapper);
+        ReflectionTestUtils.setField(itemService, "commentRepository", commentRepository);
 
         Map<String, Object> updates = Map.of("description", "10 скоростей");
 
         User owner = createOwner();
         Item item = createItem();
-        ItemDto itemDto = createItemDto();
-        itemDto.setName(String.valueOf(updates.get("description")));
+        ItemDto itemDto = createItemDtoUpdatedDescription((String) updates.get("description"));
         when(userRepository.existsById(anyLong())).thenReturn(true);
 
         when(itemRepository.existsById(anyLong())).thenReturn(true);
         when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
 
-        when(itemMapper.itemDtotoItem(any())).thenReturn(item);
-        when(itemMapper.itemToItemDto(any())).thenReturn(itemDto);
+        when(itemMapper.itemDtoToItem(any(), any())).thenReturn(item);
+        when(itemMapper.itemToItemDto(any(), any())).thenReturn(itemDto);
 
         ItemDto expectedItemDto = itemService.updateItem(owner.getId(), itemDto.getId(), updates);
 
@@ -209,20 +209,20 @@ class ItemServiceTest {
         ReflectionTestUtils.setField(itemService, "itemMapper", itemMapper);
         ReflectionTestUtils.setField(itemService, "userMapper", userMapper);
         ReflectionTestUtils.setField(itemService, "commentMapper", commentMapper);
+        ReflectionTestUtils.setField(itemService, "commentRepository", commentRepository);
 
         Map<String, Object> updates = Map.of("available", false);
 
         User owner = createOwner();
         Item item = createItem();
-        ItemDto itemDto = createItemDto();
-        itemDto.setAvailable((boolean) updates.get("available"));
+        ItemDto itemDto = createItemDtoUpdatedAvailable((boolean) updates.get("available"));
         when(userRepository.existsById(anyLong())).thenReturn(true);
 
         when(itemRepository.existsById(anyLong())).thenReturn(true);
         when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
 
-        when(itemMapper.itemDtotoItem(any())).thenReturn(item);
-        when(itemMapper.itemToItemDto(any())).thenReturn(itemDto);
+        when(itemMapper.itemDtoToItem(any(), any())).thenReturn(item);
+        when(itemMapper.itemToItemDto(any(), any())).thenReturn(itemDto);
 
         ItemDto expectedItemDto = itemService.updateItem(owner.getId(), itemDto.getId(), updates);
 
@@ -240,8 +240,8 @@ class ItemServiceTest {
         ReflectionTestUtils.setField(itemService, "itemMapper", itemMapper);
         ReflectionTestUtils.setField(itemService, "userMapper", userMapper);
         ReflectionTestUtils.setField(itemService, "commentMapper", commentMapper);
+        ReflectionTestUtils.setField(itemService, "commentRepository", commentRepository);
 
-        User owner = createOwner();
         Item item = createItem();
         ItemDto itemDto = createItemDto();
         Long itemId = itemDto.getId();
@@ -249,9 +249,9 @@ class ItemServiceTest {
         when(userRepository.existsById(anyLong())).thenReturn(true);
         when(itemRepository.existsById(anyLong())).thenReturn(true);
         when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
-        when(itemMapper.itemToItemDto(any())).thenReturn(itemDto);
+        when(itemMapper.itemToItemDto(any(), any())).thenReturn(itemDto);
 
-        ItemDto expectedItemDto = itemService.getTargetItem(owner.getId(), itemId);
+        ItemDto expectedItemDto = itemService.getItemById(itemId);
 
         assertThat(expectedItemDto.getId(), equalTo(itemId));
         assertThat(expectedItemDto.getName(), equalTo(itemDto.getName()));
@@ -277,6 +277,39 @@ class ItemServiceTest {
                 .name("ноутбук")
                 .description("ультратонкий ноутбук")
                 .available(true)
+                .owner(createOwnerDto())
+                .requestId(3L)
+                .build();
+    }
+
+    private ItemDto createItemDtoUpdatedName(String name) {
+        return ItemDto.builder()
+                .id(1L)
+                .name(name)
+                .description("ультратонкий ноутбук")
+                .available(true)
+                .owner(createOwnerDto())
+                .requestId(3L)
+                .build();
+    }
+
+    private ItemDto createItemDtoUpdatedDescription(String description) {
+        return ItemDto.builder()
+                .id(1L)
+                .name("ноутбук")
+                .description(description)
+                .available(true)
+                .owner(createOwnerDto())
+                .requestId(3L)
+                .build();
+    }
+
+    private ItemDto createItemDtoUpdatedAvailable(Boolean available) {
+        return ItemDto.builder()
+                .id(1L)
+                .name("ноутбук")
+                .description("ультратонкий ноутбук")
+                .available(available)
                 .owner(createOwnerDto())
                 .requestId(3L)
                 .build();

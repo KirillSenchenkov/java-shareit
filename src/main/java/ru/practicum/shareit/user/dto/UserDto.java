@@ -15,18 +15,18 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @Builder(toBuilder = true)
-public class UserDto {
+public final class UserDto {
 
-    private Long id;
+    private final Long id;
 
     @NotNull
-    private String name;
+    private final String name;
 
     @NotBlank
     @Email
-    private String email;
+    private final String email;
 
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime registrationDate;
+    private final LocalDateTime registrationDate;
 }

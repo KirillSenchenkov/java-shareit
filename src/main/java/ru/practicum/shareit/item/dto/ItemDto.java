@@ -1,9 +1,7 @@
 package ru.practicum.shareit.item.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import ru.practicum.shareit.comment.dto.CommentDto;
 import ru.practicum.shareit.user.dto.UserDto;
 
@@ -13,31 +11,29 @@ import javax.validation.constraints.Size;
 import java.util.Set;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder(toBuilder = true)
-public class ItemDto {
+public final class ItemDto {
 
-    private long id;
+    private final long id;
 
     @NotBlank(message = "Item name absent")
     @Size(max = 255)
-    private String name;
+    private final String name;
 
     @NotBlank(message = "Item description absent")
     @Size(max = 255)
-    private String description;
+    private final String description;
 
     @NotNull(message = "Item availability absent")
-    private boolean available;
+    private final boolean available;
 
-    private Long requestId;
+    private final Long requestId;
 
-    private ItemBookingDto lastBooking;
+    private final ItemBookingDto lastBooking;
 
-    private ItemBookingDto nextBooking;
+    private final ItemBookingDto nextBooking;
 
-    private Set<CommentDto> comments;
+    private final Set<CommentDto> comments;
 
-    private UserDto owner;
+    private final UserDto owner;
 }

@@ -21,7 +21,10 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -108,9 +111,7 @@ class UserControllerTest {
     @Test
     void update_StandardBehavior() throws Exception {
         Map<String, Object> updates = Map.of("name", "Kirill", "email", "Kirill@nmicrk.ru");
-        UserDto userDtoWithUpdates = createUserDto();
-        userDtoWithUpdates.setName((String) updates.get("name"));
-        userDtoWithUpdates.setEmail((String) updates.get("email"));
+        UserDto userDtoWithUpdates = createUserDtoUpdated((String) updates.get("name"), (String) updates.get("email"));
         when(userService.updateUser(anyLong(), any())).thenReturn(userDtoWithUpdates);
 
         mockMvc.perform(patch("/users/{id}", 1L)
@@ -130,6 +131,14 @@ class UserControllerTest {
                 .id(1L)
                 .name("Kirill")
                 .email("Kirill@nmicrk.ru")
+                .build();
+    }
+
+    private UserDto createUserDtoUpdated(String one, String two) {
+        return UserDto.builder()
+                .id(1L)
+                .name(one)
+                .email(two)
                 .build();
     }
 }

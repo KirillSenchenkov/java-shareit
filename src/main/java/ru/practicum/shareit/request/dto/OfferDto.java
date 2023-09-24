@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder(toBuilder = true)
-public class OfferDto {
+public final class OfferDto {
 
     private final Long id;
 

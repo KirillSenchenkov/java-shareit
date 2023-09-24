@@ -23,7 +23,9 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -84,7 +86,7 @@ class BookingControllerTest {
     @Test
     void create_StandardBehavior() throws Exception {
         BookingDto bookingDto = createBookingDto();
-        when(bookingService.save(any(), anyLong())).thenReturn(bookingDto);
+        when(bookingService.createBooking(any(), anyLong())).thenReturn(bookingDto);
 
         mockMvc.perform(post("/bookings")
                         .content(mapper.writeValueAsString(bookingDto))
@@ -101,9 +103,8 @@ class BookingControllerTest {
 
     @Test
     void update_StandardBehavior() throws Exception {
-        BookingDto bookingDtoWithUpdates = createBookingDto();
+        BookingDto bookingDtoWithUpdates = createBookingDtoApproved();
 
-        bookingDtoWithUpdates.setStatus(BookingStatus.APPROVED);
         when(bookingService.changeBookingStatus(anyLong(), any(), anyLong())).thenReturn(bookingDtoWithUpdates);
 
         mockMvc.perform(patch("/bookings/{bookingId}", 1L)
@@ -128,6 +129,17 @@ class BookingControllerTest {
                 .start(dateTime.minusDays(5))
                 .end(dateTime.plusDays(5))
                 .status(BookingStatus.WAITING)
+                .build();
+    }
+
+    private BookingDto createBookingDtoApproved() {
+        return BookingDto.builder()
+                .id(1L)
+                .item(createItemDto())
+                .booker(createUserDto())
+                .start(dateTime.minusDays(5))
+                .end(dateTime.plusDays(5))
+                .status(BookingStatus.APPROVED)
                 .build();
     }
 

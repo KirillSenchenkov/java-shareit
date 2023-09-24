@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 @RequiredArgsConstructor
 @Builder(toBuilder = true)
-public class CommentDto {
+public final class CommentDto {
     private final Long id;
     private final String text;
     private final Long authorId;

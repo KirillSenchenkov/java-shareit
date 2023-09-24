@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.practicum.shareit.exception.BadEntityException;
-import ru.practicum.shareit.exception.EmailExistException;
 import ru.practicum.shareit.exception.ItemNotOwnedByUserException;
 import ru.practicum.shareit.exception.NotFoundException;
 
@@ -17,12 +16,6 @@ public class ErrorHandler {
     @ExceptionHandler({ItemNotOwnedByUserException.class, NotFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleNotFound(final RuntimeException e) {
-        return Map.of("error", e.getMessage());
-    }
-
-    @ExceptionHandler(EmailExistException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public Map<String, String> handleConflict(final RuntimeException e) {
         return Map.of("error", e.getMessage());
     }
 

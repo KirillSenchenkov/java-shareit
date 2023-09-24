@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder(toBuilder = true)
-public class ItemRequestDto {
+public final class ItemRequestDto {
     private final Long id;
 
     @NotBlank

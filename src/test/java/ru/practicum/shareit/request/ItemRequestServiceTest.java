@@ -12,11 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.util.ReflectionTestUtils;
 import ru.practicum.shareit.exception.NotFoundException;
+import ru.practicum.shareit.item.ItemMapper;
+import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.item.ItemService;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.request.model.ItemRequest;
+import ru.practicum.shareit.user.UserMapper;
 import ru.practicum.shareit.user.UserRepository;
-import ru.practicum.shareit.user.UserService;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.model.User;
 
@@ -40,10 +42,10 @@ class ItemRequestServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private ItemRequestMapper itemRequestMapper;
+    private ItemRepository itemRepository;
 
     @Mock
-    private UserService userService;
+    private ItemRequestMapper itemRequestMapper;
 
     @Mock
     private ItemService itemService;
@@ -51,9 +53,16 @@ class ItemRequestServiceTest {
     @Mock
     private ItemRequestRepository itemRequestRepository;
 
+    @Mock
+    private ItemMapper itemMapper;
+
+    @Mock
+    private UserMapper userMapper;
+
     @InjectMocks
     private ItemRequestService itemRequestService =
-            new ItemRequestService(itemRequestRepository, userRepository, itemRequestMapper, userService, itemService);
+            new ItemRequestService(itemRequestRepository, userRepository, itemRepository,
+                    itemRequestMapper, itemMapper, userMapper, itemService);
 
     @Test
     void save_WrongUserId() {
@@ -71,15 +80,18 @@ class ItemRequestServiceTest {
         ReflectionTestUtils.setField(itemRequestService, "userRepository", userRepository);
         ReflectionTestUtils.setField(itemRequestService, "itemRequestMapper", itemRequestMapper);
         ReflectionTestUtils.setField(itemRequestService, "itemRequestRepository", itemRequestRepository);
-        ReflectionTestUtils.setField(itemRequestService, "userService", userService);
+        ReflectionTestUtils.setField(itemRequestService, "userMapper", userMapper);
+        ReflectionTestUtils.setField(itemRequestService, "itemRepository", itemRepository);
+        ReflectionTestUtils.setField(itemRequestService, "itemMapper", itemMapper);
+        ReflectionTestUtils.setField(itemRequestService, "itemService", itemService);
 
         User user = createUser();
         UserDto userDto = createUserDto();
         ItemRequest request = createItemRequest();
         ItemRequestDto requestDto = createItemRequestDto();
         when(userRepository.existsById(anyLong())).thenReturn(true);
-        when(itemRequestMapper.itemRequestDtoToRequest(any())).thenReturn(request);
-        when(itemRequestMapper.itemRequestToRequestDto(any())).thenReturn(requestDto);
+        when(itemRequestMapper.itemRequestDtoToRequest(any(), any())).thenReturn(request);
+        when(itemRequestMapper.itemRequestToRequestDto(any(), any())).thenReturn(requestDto);
         when(itemRequestRepository.save(any())).thenReturn(request);
 
         ItemRequestDto expectedRequestDto = itemRequestService.createRequest(user.getId(), requestDto);

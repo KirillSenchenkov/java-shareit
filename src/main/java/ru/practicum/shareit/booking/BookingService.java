@@ -38,7 +38,7 @@ public class BookingService {
 
     private final UserMapper userMapper;
 
-    public BookingDto save(BookingDtoWithId bookingDto, Long userId) {
+    public BookingDto createBooking(BookingDtoWithId bookingDto, Long userId) {
         checkUserExists(userId);
         Booking booking = toBookingWithItemAndBooker(bookingDto, userId);
         checkBookingBasicConstraints(booking, userId);
@@ -54,7 +54,7 @@ public class BookingService {
         if (!Objects.equals(booking.getItem().getOwner().getId(), requesterId)) {
             throw new ItemNotOwnedByUserException("Статус бронирования может менять только владелец");
         }
-        BookingStatus newStatus = Boolean.TRUE.equals(isApproved) ? BookingStatus.APPROVED : BookingStatus.REJECTED;
+        BookingStatus newStatus = isApproved ? BookingStatus.APPROVED : BookingStatus.REJECTED;
         if (booking.getStatus().equals(newStatus)) {
             throw new BadEntityException("Статус бронирования уже изменен");
         }
@@ -109,10 +109,10 @@ public class BookingService {
     }
 
     private BookingDto toDtoWithItemAndBooker(Booking booking) {
-        BookingDto bookingDto = bookingMapper.bookingtoBookingDto(booking);
-        bookingDto.setItem(itemMapper.itemToItemDto(booking.getItem()));
-        bookingDto.setBooker(userMapper.usertoUserDto(booking.getBooker()));
-        return bookingDto;
+        return bookingMapper.bookingToBookingDtoWithItemAndBooker(booking,
+                itemMapper.itemToItemDto(booking.getItem(), userMapper.usertoUserDto(booking.getBooker())),
+                userMapper.usertoUserDto(booking.getBooker()));
+
     }
 
     private void checkItemOwner(Booking booking, Long requesterId) {
@@ -155,8 +155,8 @@ public class BookingService {
         List<Booking> bookings = bookingRepository.searchByItemIdAndStartAddEnd(item.getId(),
                 booking.getStart(), booking.getEnd());
 
-        if (bookings.stream().anyMatch(b -> b.getStatus().equals(BookingStatus.WAITING)
-                || b.getStatus().equals(BookingStatus.APPROVED))) {
+        if (bookings.stream().anyMatch(b -> BookingStatus.WAITING.equals(b.getStatus())
+                || BookingStatus.APPROVED.equals(b.getStatus()))) {
             throw new BadEntityException("Booking can't be made to one item more than one time");
         }
     }

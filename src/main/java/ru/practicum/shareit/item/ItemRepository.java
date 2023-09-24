@@ -19,4 +19,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     List<Item> findByNameOrDescription(@Nullable String text);
 
     List<Item> findByRequestIdOrderById(Long requestId);
+
+    List<Item> findAllByRequestIdInOrderById(List<Long> requestId);
 }

@@ -51,7 +51,7 @@ class ItemRequestControllerTest {
         ReflectionTestUtils.setField(itemRequestController, "itemRequestService", itemRequestService);
 
         ItemRequestDto requestDto = createRequestDto();
-        ItemRequestWithOfferDto requestWithProposalsDto = createRequestWithProposalsDto();
+        ItemRequestWithOfferDto requestWithProposalsDto = createRequestWithOffersDto();
         when(itemRequestService.getTargetRequest(anyLong(), anyLong())).thenReturn(requestWithProposalsDto);
 
         ItemRequestWithOfferDto expected = itemRequestController.getTargetRequest(1L, 1L);
@@ -65,7 +65,7 @@ class ItemRequestControllerTest {
     @Test
     void getRequests_ShouldReturnList() throws Exception {
         ReflectionTestUtils.setField(itemRequestController, "itemRequestService", itemRequestService);
-        ItemRequestWithOfferDto requestWithProposalsDto = createRequestWithProposalsDto();
+        ItemRequestWithOfferDto requestWithProposalsDto = createRequestWithOffersDto();
         List<ItemRequestWithOfferDto> requests = List.of(requestWithProposalsDto);
 
         when(itemRequestService.getRequests(anyLong())).thenReturn(requests);
@@ -85,7 +85,7 @@ class ItemRequestControllerTest {
     @Test
     void getRequestsAll_ShouldReturnList() throws Exception {
         ReflectionTestUtils.setField(itemRequestController, "itemRequestService", itemRequestService);
-        ItemRequestWithOfferDto requestWithProposalsDto = createRequestWithProposalsDto();
+        ItemRequestWithOfferDto requestWithProposalsDto = createRequestWithOffersDto();
         List<ItemRequestWithOfferDto> requests = List.of(requestWithProposalsDto);
 
         when(itemRequestService.getPageableRequests(anyLong(), any())).thenReturn(requests);
@@ -129,15 +129,14 @@ class ItemRequestControllerTest {
                 .build();
     }
 
-    private ItemRequestWithOfferDto createRequestWithProposalsDto() {
+    private ItemRequestWithOfferDto createRequestWithOffersDto() {
         ItemRequestDto requestDto = createRequestDto();
         List<ItemDto> requestsDto = List.of(createItemDto());
-        ItemRequestWithOfferDto requestWithProposalsDto = new ItemRequestWithOfferDto(requestDto.getId(),
+        return new ItemRequestWithOfferDto(requestDto.getId(),
                 requestDto.getDescription(),
                 requestDto.getRequester(),
-                requestDto.getCreated());
-        requestWithProposalsDto.setItems(requestsDto);
-        return requestWithProposalsDto;
+                requestDto.getCreated(),
+                requestsDto);
     }
 
     private UserDto createUserDto() {
