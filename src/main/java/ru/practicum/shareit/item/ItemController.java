@@ -1,15 +1,28 @@
 package ru.practicum.shareit.item;
 
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.shareit.comment.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.service.Create;
-import ru.practicum.shareit.service.Update;
 
+import javax.validation.Valid;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/items")
@@ -21,20 +34,20 @@ public class ItemController {
     private final ItemService itemService;
 
     @PostMapping
-    public Item creteItem(@RequestBody @Validated(Create.class) ItemDto itemDto,
-                          @RequestHeader("X-Sharer-User-Id") Long ownerId) {
+    public ItemDto creteItem(@RequestBody @Valid ItemDto itemDto,
+                             @RequestHeader("X-Sharer-User-Id") Long ownerId) {
         return itemService.createItem(ownerId, itemDto);
     }
 
     @PatchMapping("/{itemId}")
-    public Item updateItem(@PathVariable Long itemId,
-                           @RequestBody @Validated(Update.class) ItemDto itemDto,
-                           @RequestHeader("X-Sharer-User-Id") Long ownerId) {
-        return itemService.updateItem(itemId, itemDto, ownerId);
+    public ItemDto updateItem(@RequestHeader("X-Sharer-User-Id") Long userId,
+                              @RequestBody Map<String, Object> updates,
+                              @PathVariable Long itemId) {
+        return itemService.updateItem(userId, itemId, updates);
     }
 
     @DeleteMapping("/{itemId}")
-    public String deleteItem(@PathVariable Long itemId) {
+    public ItemDto deleteItem(@PathVariable Long itemId) {
         return itemService.deleteItem(itemId);
     }
 
@@ -44,13 +57,20 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemDto> getItemByOwnerId(@RequestHeader("X-Sharer-User-Id") Long ownerId) {
-        return itemService.getItemsByOwnerId(ownerId);
+    public List<ItemDto> getItemsByOwnerId(@RequestHeader("X-Sharer-User-Id") long userId,
+                                           @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
+                                           @RequestParam(defaultValue = "10") @Positive Integer size) {
+        Pageable pageable = PageRequest.of(from / size, size,
+                Sort.by(Sort.Direction.ASC, "id"));
+        return itemService.getItemsByOwnerId(userId, pageable);
     }
 
     @GetMapping("/search")
-    public List<Item> getItemsFoundByText(@RequestParam String text) {
-        return itemService.getItemsFoundByText(text);
+    public List<ItemDto> search(@RequestHeader("X-Sharer-User-Id") long userId,
+                                @RequestParam(required = false) @PositiveOrZero Integer from,
+                                @RequestParam(required = false) @Positive Integer size,
+                                @RequestParam String text) {
+        return itemService.getItemsFoundByText(userId, text, from, size);
     }
 
     @PostMapping("/{itemId}/comment")

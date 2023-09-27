@@ -3,48 +3,49 @@ package ru.practicum.shareit.user;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.shareit.exception.EmailExistException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.model.User;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
 @Transactional
 public class UserService {
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    private final UserMapper userMapper;
 
     public UserDto createUser(UserDto userDto) {
-        User user = UserMapper.userDtoToUser(null, userDto);
-        userRepository.save(user);
-        return UserMapper.userToUserDto(user);
+        return userMapper.usertoUserDto(userRepository.save(userMapper.userDtotoUser(userDto)));
     }
 
-    public User updateUser(Long id, UserDto userDto) {
+    public UserDto updateUser(Long id, Map<String, Object> updates) {
         if (userRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Пользователь не найден в системе");
-        }
-        if (userRepository.findUserByEmail(userDto.getEmail()).isPresent()
-                && !userRepository.findById(id).get().getEmail().equals(userDto.getEmail())) {
-            throw new EmailExistException("Email присвоен другому пользователю");
         }
         User user = userRepository.findById(id).get();
-        return userRepository.save(new User(
-                id,
-                userDto.getName() != null ? userDto.getName() : user.getName(),
-                userDto.getEmail() != null ? userDto.getEmail() : user.getEmail()
-        ));
+        if (updates.containsKey("email")) {
+            user.setEmail(String.valueOf(updates.get("email")));
+        }
+        if (updates.containsKey("name")) {
+            user.setName(String.valueOf(updates.get("name")));
+        }
+        userRepository.save(user);
+        return userMapper.usertoUserDto(user);
     }
 
-    public String deleteUser(Long id) {
+    public UserDto deleteUser(Long id) {
         if (userRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Пользователь не найден в системе");
         }
-        userRepository.delete(userRepository.findById(id).get());
-        return String.format("Пользователь с id %s удален", id);
+        User deletedUser = userRepository.findById(id).get();
+        userRepository.deleteById(id);
+        return userMapper.usertoUserDto(deletedUser);
     }
 
 
@@ -55,13 +56,13 @@ public class UserService {
         return userRepository.findById(id).get();
     }
 
-    @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
-        return UserMapper.usersToUserDtoList(userRepository.findAll());
+        return userRepository.findAll().stream()
+                .map(userMapper::usertoUserDto)
+                .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public Boolean isExistUserById(Long userId) {
-        return userRepository.existsById(userId);
+    public UserDto getUserDto(Long id) {
+        return userMapper.usertoUserDto(getTargetUser(id));
     }
 }

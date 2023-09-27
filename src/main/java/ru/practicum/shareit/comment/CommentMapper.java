@@ -1,35 +1,23 @@
 package ru.practicum.shareit.comment;
 
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.mapstruct.InheritInverseConfiguration;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 import ru.practicum.shareit.comment.dto.CommentDto;
 import ru.practicum.shareit.comment.model.Comment;
-import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.user.model.User;
 
-import java.time.LocalDateTime;
+import java.util.Set;
 
-@Component
-@AllArgsConstructor
-public class CommentMapper {
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = "spring")
+public interface CommentMapper {
 
-    public static CommentDto commentToCommentDto(Comment comment) {
-        return CommentDto.builder()
-                .id(comment.getId())
-                .text(comment.getText())
-                .item(comment.getItem())
-                .author(comment.getAuthor())
-                .created(comment.getCreated())
-                .authorName(comment.getAuthor().getName())
-                .build();
-    }
+    @Mapping(source = "authorId", target = "author.id")
+    @Mapping(source = "authorName", target = "author.name")
+    Comment commentDtoToComment(CommentDto commentDto);
 
-    public static Comment commentDtoToComment(CommentDto commentDto, User user, Item item) {
-        return Comment.builder()
-                .text(commentDto.getText())
-                .created(LocalDateTime.now())
-                .item(item)
-                .author(user)
-                .build();
-    }
+    @InheritInverseConfiguration(name = "commentDtoToComment")
+    CommentDto commentToCommentDto(Comment comment);
+
+    Set<CommentDto> commentsToCommentsDto(Set<Comment> comments);
 }
