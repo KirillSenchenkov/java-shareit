@@ -224,7 +224,6 @@ public class ItemService {
     public CommentDto addComment(Long itemId, Long userId, CommentDto commentDto) {
         checkUserExists(userId);
         checkItemExists(itemId);
-        checkCommentEmpty(commentDto);
         Optional<User> user = userRepository.findById(userId);
         User author = user.orElse(null);
         Optional<Item> itemOptional = itemRepository.findById(itemId);
@@ -265,12 +264,6 @@ public class ItemService {
     private void checkItemExists(Long id) {
         if (!itemRepository.existsById(id)) {
             throw new NotFoundException("Предмет отсутствует в системе");
-        }
-    }
-
-    private void checkCommentEmpty(CommentDto commentDto) {
-        if (commentDto.getText().isEmpty()) {
-            throw new BadEntityException("Комментарий не может быть пустым");
         }
     }
 

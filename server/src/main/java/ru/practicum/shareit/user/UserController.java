@@ -19,13 +19,12 @@ import java.util.Map;
 @RestController
 @RequestMapping(path = "/users")
 @AllArgsConstructor
-@Validated
 public class UserController {
 
     private final UserService userService;
 
     @PostMapping()
-    public UserDto createUser(@RequestBody @Valid UserDto userDto) {
+    public UserDto createUser(@RequestBody UserDto userDto) {
         return userService.createUser(userDto);
     }
 

@@ -1,12 +1,19 @@
 package ru.practicum.shareit.item.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 
 @Data
-public class CommentInputDto {
+public final class CommentInputDto {
 
-    @NotBlank
-    private String text;
+    @NotEmpty
+    private final String text;
+
+    @JsonCreator
+    public CommentInputDto(@JsonProperty("text") String text) {
+        this.text = text;
+    }
 }

@@ -27,7 +27,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/items")
 @AllArgsConstructor
-@Validated
 public class ItemController {
 
 
@@ -58,8 +57,8 @@ public class ItemController {
 
     @GetMapping
     public List<ItemDto> getItemsByOwnerId(@RequestHeader("X-Sharer-User-Id") long userId,
-                                           @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
-                                           @RequestParam(defaultValue = "10") @Positive Integer size) {
+                                           @RequestParam(defaultValue = "0") Integer from,
+                                           @RequestParam(defaultValue = "10") Integer size) {
         Pageable pageable = PageRequest.of(from / size, size,
                 Sort.by(Sort.Direction.ASC, "id"));
         return itemService.getItemsByOwnerId(userId, pageable);
@@ -67,8 +66,8 @@ public class ItemController {
 
     @GetMapping("/search")
     public List<ItemDto> search(@RequestHeader("X-Sharer-User-Id") long userId,
-                                @RequestParam(required = false) @PositiveOrZero Integer from,
-                                @RequestParam(required = false) @Positive Integer size,
+                                @RequestParam(required = false) Integer from,
+                                @RequestParam(required = false) Integer size,
                                 @RequestParam String text) {
         return itemService.getItemsFoundByText(userId, text, from, size);
     }

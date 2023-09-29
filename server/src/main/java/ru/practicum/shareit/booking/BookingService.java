@@ -130,34 +130,17 @@ public class BookingService {
             throw new NotFoundException("Предмет не найден в системе");
         }
         Item item = itemRepository.findById(itemId).get();
-        if (Objects.equals(booking.getStart(), null)) {
-            throw new BadEntityException("Booking start should be not null");
-        }
-        if (Objects.equals(booking.getEnd(), null)) {
-            throw new BadEntityException("Booking end should be not null");
-        }
         if (Objects.equals(item.getOwner().getId(), requesterId)) {
-            throw new ItemNotOwnedByUserException("Owner want to book his/ her Item");
-        }
-        LocalDateTime start = booking.getStart();
-        LocalDateTime end = booking.getEnd();
-
-        if (end.isBefore(start)
-                || Objects.equals(start, end)
-                || end.isBefore(LocalDateTime.now())
-                || start.isBefore(LocalDateTime.now())) {
-            throw new BadEntityException("Booking start should be less than End and not be in past");
+            throw new ItemNotOwnedByUserException("Владелец не может забронировать свой предмет");
         }
         if (Boolean.FALSE.equals(item.getAvailable())) {
-            throw new BadEntityException("Booking can't be made to unavailable item");
+            throw new BadEntityException("Нельзя забронировать недоступный предмет");
         }
-
         List<Booking> bookings = bookingRepository.searchByItemIdAndStartAddEnd(item.getId(),
                 booking.getStart(), booking.getEnd());
-
         if (bookings.stream().anyMatch(b -> BookingStatus.WAITING.equals(b.getStatus())
                 || BookingStatus.APPROVED.equals(b.getStatus()))) {
-            throw new BadEntityException("Booking can't be made to one item more than one time");
+            throw new BadEntityException("Нельзя забронировать предмет более одного раза");
         }
     }
 

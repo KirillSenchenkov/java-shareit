@@ -24,14 +24,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/requests")
 @RequiredArgsConstructor
-@Validated
 public class ItemRequestController {
 
     private final ItemRequestService itemRequestService;
 
     @PostMapping()
     public ItemRequestDto createRequest(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                        @Valid @RequestBody ItemRequestDto requestDto) {
+                                        @RequestBody ItemRequestDto requestDto) {
         return itemRequestService.createRequest(userId, requestDto);
     }
 
@@ -49,8 +48,8 @@ public class ItemRequestController {
     @GetMapping("/all")
     public List<ItemRequestWithOfferDto> getRequestsPageable(
             @RequestHeader("X-Sharer-User-Id") Long userId,
-            @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
-            @RequestParam(defaultValue = "10") @Positive Integer size) {
+            @RequestParam(defaultValue = "0") Integer from,
+            @RequestParam(defaultValue = "10") Integer size) {
         Pageable pageable = PageRequest.of(from / size, size,
                 Sort.by(Sort.Direction.DESC, "created"));
         return itemRequestService.getPageableRequests(userId, pageable);
