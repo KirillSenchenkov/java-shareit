@@ -110,9 +110,9 @@ class BookingServiceTest {
 
         when(userRepository.existsById(anyLong())).thenReturn(false);
 
-        NotFoundException itemDoesNotExistException
+        NotFoundException notFoundException
                 = assertThrows(NotFoundException.class, () -> bookingService.createBooking(bookingDtoWithId, userId));
-        assertThat(itemDoesNotExistException.getMessage(), equalTo("Пользователь не найден в системе"));
+        assertThat(notFoundException.getMessage(), equalTo("Пользователь не найден в системе"));
     }
 
     @Test
